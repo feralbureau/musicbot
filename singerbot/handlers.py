@@ -6,14 +6,15 @@ from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMa
 from pytgcalls.types import MediaStream, Update, AudioQuality
 from pytgcalls.exceptions import NoActiveGroupCall
 
-from singerbot.config import ADMIN_ID, RADIO_BATCH
+from singerbot.config import ADMIN_ID, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
 from singerbot.state import active, queues, ban_users, radio_mode
+from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
     send_now_playing, _init_active_state_for_song, sc_id_from_song,
     fetch_radio_ids, get_current_orig_position, _make_transformed_filename,
-    _run_ffmpeg_transform_seek_orig, search_soundcloud_tracks,
+    _run_ffmpeg_transform_seek_orig, _download_to_file, search_soundcloud_tracks,
 )
 
 @app.on_callback_query()
@@ -385,9 +386,6 @@ async def radio_handler(_, m: Message):
         added_titles = []
         total = len(ids)
         existing_ids = {s.get("sc_id") for s in queues.get(cid, [])}
-        from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
-        from singerbot.config import DOWNLOADS_DIR
-        from singerbot.utils import _download_to_file
         for idx, rid in enumerate(ids, 1):
             if cid not in radio_mode:
                 break
