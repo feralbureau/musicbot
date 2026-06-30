@@ -1,5 +1,5 @@
 pyrogram==2.0.14
-tgcrypto
+tgcrypto==1.2.5
 py-tgcalls>=2.0.0,<2.1.0
-httpx
+httpx==0.28.1
 python-dotenv
