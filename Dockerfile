@@ -2,7 +2,6 @@ FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    POETRY_VIRTUALENVS_CREATE=false \
     TZ=UTC \
     PYTGCALL_LOG_LEVEL=warning \
     TMPDIR=/tmp/singerbot_cache
@@ -33,8 +32,7 @@ WORKDIR /home/botuser/app
 
 COPY --chown=botuser:botuser requirements.txt ./
 
-RUN python -m pip install --upgrade pip setuptools \
-  && python -m pip install --upgrade wheel \
+RUN python -m pip install --upgrade pip setuptools wheel \
   && python -m pip install -r requirements.txt
 
 COPY --chown=botuser:botuser . .
