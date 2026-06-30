@@ -4,11 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/path/to/SingerBot
-EnvironmentFile=/path/to/SingerBot/.env
-Environment="PATH=/root/.deno/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-ExecStart=/usr/bin/python3 /path/to/SingerBot/bot.py
+# Customize the paths below to match your installation:
+#   WorkingDirectory  -> directory containing bot.py
+#   EnvironmentFile  -> path to your .env file
+#   ExecStart        -> /usr/bin/python3 /path/to/bot.py
+# Consider creating a dedicated system user instead of running as root.
+User=botuser
+WorkingDirectory=/opt/singerbot
+EnvironmentFile=/opt/singerbot/.env
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/usr/bin/python3 /opt/singerbot/bot.py
 Restart=always
 RestartSec=10
 
