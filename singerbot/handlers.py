@@ -8,7 +8,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 
 from singerbot.config import ADMIN_ID, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
-from singerbot.state import active, queues, ban_users, radio_mode
+from singerbot.state import active, queues, ban_users, radio_mode, loop_mode
 from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
@@ -103,6 +103,7 @@ async def start(_, m: Message):
         "- /speedup (admin)\n"
         "- /slowed (admin)\n"
         "- /radio - toggle radio mode (auto-queue similar tracks)\n"
+        "- /loop - toggle loop mode (repeat current track)\n"
     )
     try:
         await m.reply_photo("https://telegra.ph/file/2f7debf856695e0a17296.png", caption=text, reply_markup=buttons)
@@ -435,6 +436,28 @@ async def radio_handler(_, m: Message):
             await progress_msg.edit("radio failed to fetch tracks")
         except Exception:
             pass
+
+
+@app.on_message(filters.command("loop"))
+async def loop_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+    if cid not in active:
+        return await m.reply("nothing is playing to loop")
+    if cid in loop_mode:
+        loop_mode.discard(cid)
+        await m.reply("loop disabled")
+    else:
+        loop_mode.add(cid)
+        await m.reply("loop enabled — current track will repeat when it ends")
 
 @calls.on_update()
 async def on_end(_, u: Update):
