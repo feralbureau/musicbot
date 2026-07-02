@@ -282,9 +282,15 @@ def _init_active_state_for_song(song: dict) -> dict:
     }
 
 
-async def play_next(cid):
+async def play_next(cid, _retries: int = 0):
     if cid not in queues or not queues[cid]:
         logger.info(f"Queue empty in {cid}")
+        if cid in active:
+            del active[cid]
+        return
+    if _retries > 3:
+        logger.error(f"play_next: too many retries for {cid}, stopping")
+        queues[cid].clear()
         if cid in active:
             del active[cid]
         return
@@ -302,4 +308,4 @@ async def play_next(cid):
             logger.warning(f"ensure_radio_filled failed in play_next for {cid}: {exc}")
     except Exception as exc:
         logger.error(f"play next error: {exc}")
-        await play_next(cid)
+        await play_next(cid, _retries + 1)
