@@ -73,11 +73,89 @@ async def callback_handler(_, query: CallbackQuery):
                 queues[cid].clear()
             if cid in active:
                 del active[cid]
+            from singerbot.state import last_np_msg
+            if cid in last_np_msg:
+                try:
+                    await last_np_msg[cid].delete()
+                except Exception:
+                    pass
+                del last_np_msg[cid]
             await query.answer("stopped", show_alert=False)
             await query.message.edit_caption("**stopped**")
-            await app.send_message(cid, f"{name} stopped")
+            await app.send_message(cid, f"⏹ {name} stopped")
         except Exception:
             await query.answer("not in call", show_alert=True)
+    elif data == "toggle_radio":
+        from singerbot.state import radio_mode
+        if cid in radio_mode:
+            radio_mode.remove(cid)
+            await query.answer("radio disabled")
+        else:
+            radio_mode.add(cid)
+            await query.answer("radio enabled")
+        if cid in active:
+            await send_now_playing(cid, active[cid], queues.get(cid, []))
+    elif data in ["speedup", "slowed", "restore"]:
+        if uid != ADMIN_ID:
+            return await query.answer("admin only", show_alert=True)
+        from singerbot.state import active
+        if cid not in active:
+            return await query.answer("nothing playing", show_alert=True)
+        await query.answer("processing speed change...")
+        if data == "speedup":
+            m_obj = query.message
+            m_obj.text = "/speedup" # Mock for command handler
+            await speedup_handler(_, m_obj)
+        elif data == "slowed":
+            m_obj = query.message
+            m_obj.text = "/slowed"
+            await slowed_handler(_, m_obj)
+        elif data == "restore":
+            m_obj = query.message
+            m_obj.text = "/restore"
+            await restore_handler(_, m_obj)
+    elif data.startswith("play_sc_"):
+        sc_id = data.split("_")[-1]
+        await query.answer("adding to queue...")
+        from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
+        from singerbot.config import DOWNLOADS_DIR
+        from singerbot.utils import _download_to_file
+        try:
+            track = await sc_get_track(sc_id)
+            if not track:
+                return await query.message.edit("could not find track")
+            stream_url = await sc_get_stream_url(track["id"])
+            dest = os.path.join(DOWNLOADS_DIR, f"sc_{track['id']}.mp3")
+            if not os.path.exists(dest):
+                await _download_to_file(stream_url, dest)
+            song = {
+                "file": dest,
+                "title": track["title"],
+                "artist": track["artist"],
+                "duration": track["duration"],
+                "thumb": track.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png",
+                "webpage": track.get("webpage", ""),
+                "sc_id": track["id"],
+            }
+            if cid not in queues:
+                queues[cid] = []
+            if cid not in active:
+                state = _init_active_state_for_song(song)
+                stream = MediaStream(state["file"], AudioQuality.HIGH)
+                try:
+                    await calls.join_group_call(cid, stream)
+                except Exception as e:
+                    if "already" in str(e).lower():
+                        await calls.change_stream(cid, stream)
+                    else:
+                        raise
+                active[cid] = state
+                await send_now_playing(cid, state, [])
+            else:
+                queues[cid].append(song)
+                await app.send_message(cid, f"✅ queued: {song['title']} at position {len(queues[cid])}")
+        except Exception as e:
+            await app.send_message(cid, f"❌ error: {str(e)}")
 
 @app.on_message(filters.command("start"))
 async def start(_, m: Message):
@@ -86,24 +164,27 @@ async def start(_, m: Message):
         return
     buttons = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("add to group", url="https://t.me/SINGERBOT?startgroup=true")],
-            [InlineKeyboardButton("commands", callback_data="help"), InlineKeyboardButton("owner", url="https://t.me/Vclub_Tech")],
+            [InlineKeyboardButton("➕ add to group", url="https://t.me/SINGERBOT?startgroup=true")],
+            [InlineKeyboardButton("📖 commands", callback_data="help"), InlineKeyboardButton("👨‍💻 owner", url="https://t.me/Vclub_Tech")],
         ]
     )
     text = (
-        "**music bot**\n\n"
-        "use /play to start streaming.\n\n"
-        "commands:\n"
-        "- /play [song]\n"
-        "- /skip\n"
-        "- /pause\n"
-        "- /resume\n"
-        "- /stop\n"
-        "- /queue\n"
-        "- /speedup (admin)\n"
-        "- /slowed (admin)\n"
-        "- /radio - toggle radio mode (auto-queue similar tracks)\n"
-        "- /loop - toggle loop mode (repeat current track)\n"
+        "**Welcome to SingerBot! 🎵**\n\n"
+        "I can stream music from SoundCloud directly into your voice chats! 🚀\n\n"
+        "**Basic Commands:**\n"
+        "• `/play [song]` - start streaming\n"
+        "• `/search [query]` - search for tracks\n"
+        "• `/skip` - skip current track\n"
+        "• `/pause` / `/resume` - control playback\n"
+        "• `/stop` - stop and clear queue\n"
+        "• `/queue` - check current queue\n"
+        "• `/radio` - toggle auto-queue mode\n"
+        "• `/loop` - toggle repeat mode\n\n"
+        "**Admin Commands:**\n"
+        "• `/speedup` - 1.2x speed\n"
+        "• `/slowed` - 0.85x speed\n"
+        "• `/restore` - normal speed\n\n"
+        "Use the buttons below for more info!"
     )
     try:
         await m.reply_photo("https://telegra.ph/file/2f7debf856695e0a17296.png", caption=text, reply_markup=buttons)
@@ -118,16 +199,20 @@ async def help_cb(_, q: CallbackQuery):
         return
     await q.answer()
     help_text = (
-        "help guide\n\n"
-        "`/play [song or link]`\n"
-        "`/skip` - skip\n"
-        "`/pause` - pause\n"
-        "`/resume` - resume\n"
-        "`/stop` - stop\n"
-        "`/queue` - view queue\n"
-        "`/speedup` - pitch up & speed up (admin only)\n"
-        "`/slowed` - pitch down & slow down (admin only)\n"
-        "`/radio` - toggle radio mode (auto-queue similar tracks)\n"
+        "**📖 SingerBot Help Guide**\n\n"
+        "**👤 User Commands:**\n"
+        "• `/play [song/url]` - Stream from SoundCloud\n"
+        "• `/search [query]` - Search and pick tracks\n"
+        "• `/skip` - Skip current track\n"
+        "• `/pause` / `/resume` - Control playback\n"
+        "• `/stop` - Stop and clear queue\n"
+        "• `/queue` - View current tracks\n"
+        "• `/radio` - Toggle auto-queue similar tracks\n\n"
+        "**🔐 Admin Commands:**\n"
+        "• `/speedup` - 1.2x speed + pitch up\n"
+        "• `/slowed` - 0.85x speed + pitch down\n"
+        "• `/restore` - Normal speed\n"
+        "• `/ban` / `/unban` - User access control"
     )
     await q.message.reply(help_text)
 
@@ -166,17 +251,19 @@ async def search_handler(_, m: Message):
     if len(m.command) < 2:
         return await m.reply("usage: `/search [song]`")
     query = m.text.split(None, 1)[1]
-    msg = await m.reply("**searching...**")
+    msg = await m.reply("**🔍 searching...**")
     try:
         results = await search_soundcloud_tracks(query)
         if not results:
-            return await msg.edit("no results found")
-        text = "**search results**\n\n"
-        for i, res in enumerate(results, 1):
-            text += f"{i}. {res['title'].lower()} ({res['duration']})\n"
-        await msg.edit(text)
+            return await msg.edit("❌ no results found")
+
+        buttons = []
+        for res in results:
+            buttons.append([InlineKeyboardButton(f"🎵 {res['title'][:30]} ({res['duration']})", callback_data=f"play_sc_{res['id']}")])
+
+        await msg.edit("**🔍 search results**", reply_markup=InlineKeyboardMarkup(buttons))
     except Exception as e:
-        await msg.edit(f"error: {str(e).lower()}")
+        await msg.edit(f"❌ error: {str(e).lower()}")
 
 @app.on_message(filters.command("play"))
 async def play(_, m: Message):
@@ -323,9 +410,16 @@ async def stop(_, m: Message):
             queues[cid].clear()
         if cid in active:
             del active[cid]
-        await m.reply("**stopped**")
+        from singerbot.state import last_np_msg
+        if cid in last_np_msg:
+            try:
+                await last_np_msg[cid].delete()
+            except Exception:
+                pass
+            del last_np_msg[cid]
+        await m.reply("⏹ **stopped and queue cleared**")
     except Exception:
-        await m.reply("not in call")
+        await m.reply("❌ not in call")
 
 @app.on_message(filters.command("queue"))
 async def queue(_, m: Message):
@@ -340,13 +434,17 @@ async def queue(_, m: Message):
         except Exception:
             pass
     if cid not in active:
-        return await m.reply("nothing playing")
-    text = "**queue**\n\n"
+        return await m.reply("❌ nothing playing")
+
+    text = f"**📋 current queue for {cid}**\n\n"
+    text += f"**🎵 now playing:** {active[cid]['title']}\n\n"
+
     if cid in queues and queues[cid]:
         for i, s in enumerate(queues[cid], 1):
-            text += f"{i}. {s['title'].lower()}\n"
+            text += f"{i}. • {s['title'].lower()}\n"
+        text += f"\n**🔢 total tracks:** {len(queues[cid]) + 1}"
     else:
-        text += "empty"
+        text += "• _queue is empty_"
     await m.reply(text)
 
 @app.on_message(filters.command("radio"))

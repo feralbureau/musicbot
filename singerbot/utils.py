@@ -146,6 +146,7 @@ async def search_soundcloud_tracks(q: str) -> list:
     results = await sc_search_tracks(q, limit=5)
     return [
         {
+            "id": t.get("id"),
             "title": t["title"],
             "duration": t.get("duration_str", format_duration(t.get("duration", 0))),
         }
@@ -184,36 +185,57 @@ async def ensure_assistant_joined(cid):
 
 
 async def send_now_playing(cid, song, queue_list):
+    from singerbot.state import last_np_msg, radio_mode
+
+    # Try to delete last now playing message
+    if cid in last_np_msg:
+        try:
+            await last_np_msg[cid].delete()
+        except Exception:
+            pass
+
     caption = (
-        "**now playing**\n\n"
-        f"**song :** {song['title']}\n"
-        f"**artist :** {song['artist']}\n"
-        f"**duration :** {format_duration(song['duration'])}\n\n"
+        "**🎵 now playing**\n\n"
+        f"**📌 song :** {song['title']}\n"
+        f"**👤 artist :** {song['artist']}\n"
+        f"**⏳ duration :** {format_duration(song['duration'])}\n\n"
     )
     if queue_list:
-        caption += "**up next:**\n\n"
+        caption += "**🔜 up next:**\n\n"
         for i, s in enumerate(queue_list[:5], 1):
             caption += f"{i}. {s['title']}\n"
         if len(queue_list) > 5:
             caption += f"\n_plus {len(queue_list) - 5} more_"
+
+    radio_status = "ON ✅" if cid in radio_mode else "OFF ❌"
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("pause", callback_data="pause"),
-                InlineKeyboardButton("resume", callback_data="resume"),
+                InlineKeyboardButton("⏸ pause", callback_data="pause"),
+                InlineKeyboardButton("▶️ resume", callback_data="resume"),
             ],
             [
-                InlineKeyboardButton("skip", callback_data="skip"),
-                InlineKeyboardButton("stop", callback_data="end"),
+                InlineKeyboardButton("⏭ skip", callback_data="skip"),
+                InlineKeyboardButton("⏹ stop", callback_data="end"),
             ],
+            [
+                InlineKeyboardButton(f"📻 radio: {radio_status}", callback_data="toggle_radio"),
+            ],
+            [
+                InlineKeyboardButton("⏩ speedup", callback_data="speedup"),
+                InlineKeyboardButton("⏪ slowed", callback_data="slowed"),
+                InlineKeyboardButton("🔄 restore", callback_data="restore"),
+            ]
         ]
     )
     thumb = song.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png"
     try:
-        await app.send_photo(cid, thumb, caption=caption, reply_markup=buttons)
+        msg = await app.send_photo(cid, thumb, caption=caption, reply_markup=buttons)
+        last_np_msg[cid] = msg
     except Exception as exc:
         logger.warning(f"Photo send failed: {exc}, using text")
-        await app.send_message(cid, caption, reply_markup=buttons)
+        msg = await app.send_message(cid, caption, reply_markup=buttons)
+        last_np_msg[cid] = msg
 
 
 def _make_transformed_filename(src: str, suffix: str) -> str:
