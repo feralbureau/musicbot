@@ -6,7 +6,7 @@ from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMa
 from pytgcalls.types import MediaStream, Update, AudioQuality
 from pytgcalls.exceptions import NoActiveGroupCall
 
-from singerbot.config import ADMIN_ID, DOWNLOADS_DIR, RADIO_BATCH
+from singerbot.config import ADMIN_ID, DEFAULT_THUMB, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
 from singerbot.state import active, queues, ban_users, radio_mode, loop_mode
 from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
@@ -133,7 +133,7 @@ async def callback_handler(_, query: CallbackQuery):
                 "title": track["title"],
                 "artist": track["artist"],
                 "duration": track["duration"],
-                "thumb": track.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png",
+                "thumb": track.get("thumb") or DEFAULT_THUMB,
                 "webpage": track.get("webpage", ""),
                 "sc_id": track["id"],
             }
@@ -187,7 +187,7 @@ async def start(_, m: Message):
         "Use the buttons below for more info!"
     )
     try:
-        await m.reply_photo("https://telegra.ph/file/2f7debf856695e0a17296.png", caption=text, reply_markup=buttons)
+        await m.reply_photo(DEFAULT_THUMB, caption=text, reply_markup=buttons)
     except Exception:
         await m.reply(text, reply_markup=buttons)
 
@@ -506,7 +506,7 @@ async def radio_handler(_, m: Message):
                     "title": track["title"],
                     "artist": track["artist"],
                     "duration": track["duration"],
-                    "thumb": track.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png",
+                    "thumb": track.get("thumb") or DEFAULT_THUMB,
                     "webpage": track.get("webpage", ""),
                     "sc_id": track["id"],
                 }

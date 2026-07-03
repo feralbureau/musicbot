@@ -12,7 +12,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pytgcalls.exceptions import NoActiveGroupCall
 from pytgcalls.types import MediaStream, AudioQuality
 
-from singerbot.config import DOWNLOADS_DIR, RADIO_BATCH
+from singerbot.config import DOWNLOADS_DIR, RADIO_BATCH, DEFAULT_THUMB
 from singerbot.state import queues, active, radio_mode, ban_users, loop_mode
 from singerbot.core import app, user, calls, logger
 from singerbot.platforms.soundcloud import (
@@ -63,7 +63,7 @@ async def download_audio(q: str) -> dict:
         "title": track["title"],
         "artist": track["artist"],
         "duration": track["duration"],
-        "thumb": track.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png",
+        "thumb": track.get("thumb") or DEFAULT_THUMB,
         "webpage": track.get("webpage", ""),
         "sc_id": track["id"],
     }
@@ -130,7 +130,7 @@ async def ensure_radio_filled(cid):
                     "title": track["title"],
                     "artist": track["artist"],
                     "duration": track["duration"],
-                    "thumb": track.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png",
+                    "thumb": track.get("thumb") or DEFAULT_THUMB,
                     "webpage": track.get("webpage", ""),
                     "sc_id": track["id"],
                 }
@@ -228,7 +228,7 @@ async def send_now_playing(cid, song, queue_list):
             ]
         ]
     )
-    thumb = song.get("thumb") or "https://telegra.ph/file/2f7debf856695e0a17296.png"
+    thumb = song.get("thumb") or DEFAULT_THUMB
     try:
         msg = await app.send_photo(cid, thumb, caption=caption, reply_markup=buttons)
         last_np_msg[cid] = msg
