@@ -1,6 +1,29 @@
+import json
+import os
+
 queues = {}
 active = {}
 radio_mode = set()
 loop_mode = set()
-ban_users = set()
 last_np_msg = {}
+
+BANS_FILE = os.path.join(os.getenv("DOWNLOADS_DIR", "/tmp/singerbot_cache"), "bans.json")
+
+
+def load_bans() -> set:
+    try:
+        with open(BANS_FILE) as f:
+            return set(json.load(f))
+    except (FileNotFoundError, json.JSONDecodeError, ValueError):
+        return set()
+
+
+def save_bans(bans: set) -> None:
+    try:
+        with open(BANS_FILE, "w") as f:
+            json.dump(sorted(int(b) for b in bans), f)
+    except Exception:
+        pass
+
+
+ban_users = load_bans()

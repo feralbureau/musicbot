@@ -8,7 +8,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 
 from singerbot.config import ADMIN_ID, DEFAULT_THUMB, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
-from singerbot.state import active, queues, ban_users, radio_mode, loop_mode
+from singerbot.state import active, queues, ban_users, radio_mode, loop_mode, save_bans
 from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
@@ -224,6 +224,7 @@ async def ban_handler(_, m: Message):
         target = m.command[1]
         user_obj = await app.get_users(target)
         ban_users.add(user_obj.id)
+        save_bans(ban_users)
         await m.reply(f"banned {user_obj.id}")
     except Exception as e:
         await m.reply(f"error: {str(e).lower()}")
@@ -237,6 +238,7 @@ async def unban_handler(_, m: Message):
         user_obj = await app.get_users(target)
         if user_obj.id in ban_users:
             ban_users.remove(user_obj.id)
+            save_bans(ban_users)
             await m.reply(f"unbanned {user_obj.id}")
         else:
             await m.reply("not banned")
