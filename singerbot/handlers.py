@@ -6,14 +6,15 @@ from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMa
 from pytgcalls.types import MediaStream, Update, AudioQuality
 from pytgcalls.exceptions import NoActiveGroupCall
 
-from singerbot.config import ADMIN_ID, RADIO_BATCH
+from singerbot.config import ADMIN_ID, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
-from singerbot.state import active, queues, ban_users, radio_mode
+from singerbot.state import active, queues, ban_users, radio_mode, loop_mode
+from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
     send_now_playing, _init_active_state_for_song, sc_id_from_song,
     fetch_radio_ids, get_current_orig_position, _make_transformed_filename,
-    _run_ffmpeg_transform_seek_orig, search_soundcloud_tracks,
+    _run_ffmpeg_transform_seek_orig, _download_to_file, search_soundcloud_tracks,
 )
 
 @app.on_callback_query()
@@ -171,10 +172,18 @@ async def start(_, m: Message):
         "**Welcome to SingerBot! 🎵**\n\n"
         "I can stream music from SoundCloud directly into your voice chats! 🚀\n\n"
         "**Basic Commands:**\n"
-        "• `/play [song]` - play a song\n"
+        "• `/play [song]` - start streaming\n"
         "• `/search [query]` - search for tracks\n"
+        "• `/skip` - skip current track\n"
+        "• `/pause` / `/resume` - control playback\n"
+        "• `/stop` - stop and clear queue\n"
         "• `/queue` - check current queue\n"
-        "• `/radio` - toggle auto-play mode\n\n"
+        "• `/radio` - toggle auto-queue mode\n"
+        "• `/loop` - toggle repeat mode\n\n"
+        "**Admin Commands:**\n"
+        "• `/speedup` - 1.2x speed\n"
+        "• `/slowed` - 0.85x speed\n"
+        "• `/restore` - normal speed\n\n"
         "Use the buttons below for more info!"
     )
     try:
@@ -476,9 +485,6 @@ async def radio_handler(_, m: Message):
         added_titles = []
         total = len(ids)
         existing_ids = {s.get("sc_id") for s in queues.get(cid, [])}
-        from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
-        from singerbot.config import DOWNLOADS_DIR
-        from singerbot.utils import _download_to_file
         for idx, rid in enumerate(ids, 1):
             if cid not in radio_mode:
                 break
@@ -528,6 +534,28 @@ async def radio_handler(_, m: Message):
             await progress_msg.edit("radio failed to fetch tracks")
         except Exception:
             pass
+
+
+@app.on_message(filters.command("loop"))
+async def loop_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+    if cid not in active:
+        return await m.reply("nothing is playing to loop")
+    if cid in loop_mode:
+        loop_mode.discard(cid)
+        await m.reply("loop disabled")
+    else:
+        loop_mode.add(cid)
+        await m.reply("loop enabled — current track will repeat when it ends")
 
 @calls.on_update()
 async def on_end(_, u: Update):

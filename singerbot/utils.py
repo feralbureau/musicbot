@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import re
 import shlex
 import time
 import uuid
@@ -14,7 +13,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 from pytgcalls.types import MediaStream, AudioQuality
 
 from singerbot.config import DOWNLOADS_DIR, RADIO_BATCH
-from singerbot.state import queues, active, radio_mode, ban_users
+from singerbot.state import queues, active, radio_mode, ban_users, loop_mode
 from singerbot.core import app, user, calls, logger
 from singerbot.platforms.soundcloud import (
     search_tracks as sc_search_tracks,
@@ -305,9 +304,19 @@ def _init_active_state_for_song(song: dict) -> dict:
     }
 
 
-async def play_next(cid):
+async def play_next(cid, _retries: int = 0):
     if cid not in queues or not queues[cid]:
-        logger.info(f"Queue empty in {cid}")
+        if cid in loop_mode and cid in active:
+            old = active[cid]
+            queues[cid] = [dict(old)]
+        else:
+            logger.info(f"Queue empty in {cid}")
+            if cid in active:
+                del active[cid]
+            return
+    if _retries > 3:
+        logger.error(f"play_next: too many retries for {cid}, stopping")
+        queues[cid].clear()
         if cid in active:
             del active[cid]
         return
@@ -325,4 +334,4 @@ async def play_next(cid):
             logger.warning(f"ensure_radio_filled failed in play_next for {cid}: {exc}")
     except Exception as exc:
         logger.error(f"play next error: {exc}")
-        await play_next(cid)
+        await play_next(cid, _retries + 1)
