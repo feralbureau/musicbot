@@ -289,6 +289,7 @@ async def _run_ffmpeg_transform_seek_orig(
 def _init_active_state_for_song(song: dict) -> dict:
     return {
         "orig_file": song["file"],
+        "orig_title": song.get("title", "unknown"),
         "file": song["file"],
         "title": song.get("title", "unknown"),
         "artist": song.get("artist", "unknown"),

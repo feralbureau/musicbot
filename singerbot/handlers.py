@@ -599,7 +599,7 @@ async def speedup_handler(_, m: Message):
         state["stream_start_time"] = time.time()
         state["paused"] = False
         state["play_factor"] = float(factor)
-        state["title"] = f"{state.get('title', 'unknown')} (speedup)"
+        state["title"] = f"{state.get('orig_title', 'unknown')} (speedup)"
         await notice.delete()
         if m.reply_to_message and m.reply_to_message.from_user:
             ru = m.reply_to_message.from_user
@@ -651,7 +651,7 @@ async def slowed_handler(_, m: Message):
         state["stream_start_time"] = time.time()
         state["paused"] = False
         state["play_factor"] = float(factor)
-        state["title"] = f"{state.get('title', 'unknown')} (slowed)"
+        state["title"] = f"{state.get('orig_title', 'unknown')} (slowed)"
         await notice.delete()
         if m.reply_to_message and m.reply_to_message.from_user:
             ru = m.reply_to_message.from_user
@@ -706,8 +706,7 @@ async def restore_handler(_, m: Message):
         state["stream_start_time"] = time.time()
         state["paused"] = False
         state["play_factor"] = float(factor)
-        base_title = state.get("title", "unknown").split(" (")[0]
-        state["title"] = f"{base_title} (restored)"
+        state["title"] = state.get("orig_title", "unknown")
         try:
             await notice.delete()
         except Exception:
