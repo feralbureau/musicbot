@@ -13,7 +13,7 @@ from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
     send_now_playing, _init_active_state_for_song, sc_id_from_song,
-    fetch_radio_ids, get_current_orig_position, _make_transformed_filename,
+    fetch_radio_ids, format_duration, get_current_orig_position, _make_transformed_filename,
     _run_ffmpeg_transform_seek_orig, _download_to_file, search_soundcloud_tracks,
 )
 
@@ -446,6 +446,59 @@ async def queue(_, m: Message):
     else:
         text += "• _queue is empty_"
     await m.reply(text)
+
+
+@app.on_message(filters.command(["current", "np"]))
+async def current_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target_chat = await app.get_chat(m.command[1])
+            cid = target_chat.id
+        except Exception:
+            pass
+    if cid not in active:
+        return await m.reply("❌ nothing playing")
+
+    state = active[cid]
+    elapsed = get_current_orig_position(state)
+    total = state.get("duration", 0)
+    pos_str = format_duration(elapsed)
+    total_str = format_duration(total) if total else "live"
+
+    text = (
+        "**🎵 now playing**\n\n"
+        f"**title:** {state['title']}\n"
+        f"**artist:** {state['artist']}\n"
+        f"**⏳ {pos_str} / {total_str}**\n"
+    )
+    if cid in radio_mode:
+        text += "**📻 radio:** ON ✅\n"
+    if cid in loop_mode:
+        text += "**🔁 loop:** ON ✅\n"
+    if state.get("play_factor", 1.0) != 1.0:
+        text += f"**⚡ speed:** {state['play_factor']}x\n"
+
+    thumb = state.get("thumb") or DEFAULT_THUMB
+    buttons = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("⏸ pause", callback_data="pause"),
+                InlineKeyboardButton("⏭ skip", callback_data="skip"),
+            ],
+            [
+                InlineKeyboardButton("⏹ stop", callback_data="end"),
+            ],
+        ]
+    )
+    try:
+        await m.reply_photo(thumb, caption=text, reply_markup=buttons)
+    except Exception:
+        await m.reply(text, reply_markup=buttons)
+
 
 @app.on_message(filters.command("radio"))
 async def radio_handler(_, m: Message):
