@@ -612,6 +612,24 @@ async def loop_handler(_, m: Message):
         loop_mode.add(cid)
         await m.reply("loop enabled — current track will repeat when it ends")
 
+@app.on_message(filters.command("shuffle"))
+async def shuffle_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+    if cid not in queues or not queues[cid]:
+        return await m.reply("queue is empty, nothing to shuffle")
+    import random
+    random.shuffle(queues[cid])
+    await m.reply(f"shuffled {len(queues[cid])} tracks in the queue")
+
 @calls.on_update()
 async def on_end(_, u: Update):
     from pytgcalls.types import StreamAudioEnded
