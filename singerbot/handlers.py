@@ -630,6 +630,34 @@ async def shuffle_handler(_, m: Message):
     random.shuffle(queues[cid])
     await m.reply(f"shuffled {len(queues[cid])} tracks in the queue")
 
+
+@app.on_message(filters.command("restart"))
+async def restart_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+    if cid not in active:
+        return await m.reply("nothing is playing")
+    try:
+        state = active[cid]
+        new_state = _init_active_state_for_song(state)
+        stream = MediaStream(new_state["file"], AudioQuality.HIGH)
+        await calls.change_stream(cid, stream)
+        active[cid] = new_state
+        await send_now_playing(cid, new_state, queues.get(cid, []))
+        await m.reply("restarted from the beginning")
+    except Exception as e:
+        logger.error(f"restart failed: {e}")
+        await m.reply(f"error restarting: {e}")
+
+
 @calls.on_update()
 async def on_end(_, u: Update):
     from pytgcalls.types import StreamAudioEnded
