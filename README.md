@@ -95,6 +95,8 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/search [query]` | Search for songs on SoundCloud |
 | `/radio` | Toggle radio mode (auto-queue similar tracks) |
 | `/loop` | Toggle loop mode (repeat current track) |
+| `/shuffle` | Shuffle the current queue |
+| `/restart` | Restart the current track from the beginning |
 | `/speedup` | Speed up playback (admin only) |
 | `/slowed` | Slow down playback (admin only) |
 | `/restore` | Restore normal playback speed (admin only) |

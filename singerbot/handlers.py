@@ -86,7 +86,6 @@ async def callback_handler(_, query: CallbackQuery):
         except Exception:
             await query.answer("not in call", show_alert=True)
     elif data == "toggle_radio":
-        from singerbot.state import radio_mode
         if cid in radio_mode:
             radio_mode.remove(cid)
             await query.answer("radio disabled")
@@ -98,7 +97,6 @@ async def callback_handler(_, query: CallbackQuery):
     elif data in ["speedup", "slowed", "restore"]:
         if uid != ADMIN_ID:
             return await query.answer("admin only", show_alert=True)
-        from singerbot.state import active
         if cid not in active:
             return await query.answer("nothing playing", show_alert=True)
         await query.answer("processing speed change...")
@@ -117,9 +115,6 @@ async def callback_handler(_, query: CallbackQuery):
     elif data.startswith("play_sc_"):
         sc_id = data.split("_")[-1]
         await query.answer("adding to queue...")
-        from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
-        from singerbot.config import DOWNLOADS_DIR
-        from singerbot.utils import _download_to_file
         try:
             track = await sc_get_track(sc_id)
             if not track:

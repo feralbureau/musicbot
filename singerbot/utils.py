@@ -185,7 +185,7 @@ async def ensure_assistant_joined(cid):
 
 
 async def send_now_playing(cid, song, queue_list):
-    from singerbot.state import last_np_msg, radio_mode
+    from singerbot.state import last_np_msg
 
     # Try to delete last now playing message
     if cid in last_np_msg:
