@@ -96,6 +96,7 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/radio` | Toggle radio mode (auto-queue similar tracks) |
 | `/loop` | Toggle loop mode (repeat current track) |
 | `/shuffle` | Shuffle the current queue |
+| `/remove [position]` | Remove a specific track from the queue by its position number |
 | `/restart` | Restart the current track from the beginning |
 | `/speedup` | Speed up playback (admin only) |
 | `/slowed` | Slow down playback (admin only) |
