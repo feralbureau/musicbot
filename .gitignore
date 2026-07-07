@@ -13,3 +13,10 @@ build/
 .DS_Store
 .vscode/
 .idea/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.swp
+*.swo
+*~
+*.orig
