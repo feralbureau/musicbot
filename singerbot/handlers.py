@@ -626,6 +626,45 @@ async def shuffle_handler(_, m: Message):
     await m.reply(f"shuffled {len(queues[cid])} tracks in the queue")
 
 
+@app.on_message(filters.command("remove"))
+async def remove_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 2:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+            parts = m.command[2:]
+        except Exception:
+            parts = m.command[1:]
+    else:
+        parts = m.command[1:]
+
+    if not parts:
+        return await m.reply("usage: `/remove [position]` — removes the track at that position from the queue")
+    try:
+        pos = int(parts[0])
+    except ValueError:
+        return await m.reply("position must be a number")
+    if pos < 1:
+        return await m.reply("position must be 1 or greater")
+    if cid not in queues or not queues[cid]:
+        return await m.reply("queue is empty")
+    if pos > len(queues[cid]):
+        return await m.reply(f"queue only has {len(queues[cid])} track{'s' if len(queues[cid]) > 1 else ''}, can't remove position {pos}")
+    removed = queues[cid].pop(pos - 1)
+    title = removed.get("title", "unknown")
+    await m.reply(f"removed **{title}** from position {pos}")
+    try:
+        from singerbot.state import last_np_msg
+        if cid in active and cid in last_np_msg:
+            await send_now_playing(cid, active[cid], queues.get(cid, []))
+    except Exception:
+        pass
+
+
 @app.on_message(filters.command("restart"))
 async def restart_handler(_, m: Message):
     uid = m.from_user.id if m.from_user else None
