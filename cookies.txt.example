@@ -1,22 +1,19 @@
 # Netscape HTTP Cookie File
-# This file is used by yt-dlp to access YouTube
-# Export your cookies from your browser using a browser extension like "Get cookies.txt"
+# This file is used if you need authenticated access to SoundCloud streams.
+# The bot fetches stream URLs via the SoundCloud API v2 using client IDs,
+# so cookies are typically not required.
 #
-# IMPORTANT: Rename this file to "cookies.txt" to use it, or set COOKIES_FILE env var
+# If you encounter 403 errors on stream downloads even with valid client IDs,
+# you can export your SoundCloud session cookies here.
 #
-# Format example:
-# .youtube.com    TRUE    /    FALSE    1234567890    VISITOR_INFO1_LIVE    XXXXXX
-# .youtube.com    TRUE    /    FALSE    1234567890    PREF    XXXXXX
-# .youtube.com    TRUE    /    TRUE    1234567890    SID    XXXXXX
+# Format:
+# .soundcloud.com	TRUE	/	FALSE	0	value_name	value
 #
 # To get your cookies:
-# 1. Install the "Get cookies.txt" browser extension (Chrome/Firefox)
-# 2. Go to YouTube and log in to your account
-# 3. Click the extension and click "Export" or "Current Tab"
-# 4. Copy the exported content
-# 5. Create a file named "cookies.txt" in the project root directory
-# 6. Paste the cookie content into cookies.txt
-# 7. Restart the bot
+# 1. Log in to soundcloud.com in your browser
+# 2. Install the "Get cookies.txt" extension (Chrome/Firefox)
+# 3. Export cookies for soundcloud.com
+# 4. Save as cookies.txt in the project root
 #
-# Alternatively, you can use --cookies-from-browser flag with yt-dlp directly
-# or set COOKIES_FILE=/path/to/cookies.txt in your .env file
+# Note: This file is NOT used by the current SoundCloud API v2 integration.
+# It is kept for future use if direct stream authentication is needed.
