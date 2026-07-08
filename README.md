@@ -92,7 +92,10 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/resume` | Resume playback |
 | `/stop` | Stop playback and clear queue |
 | `/queue` | View the current queue |
+| `/current` or `/np` | View currently playing track |
 | `/search [query]` | Search for songs on SoundCloud |
+| `/clear` | Clear the queue without stopping playback |
+| `/seek [pos]` | Jump to a position (seconds or mm:ss) in the current track |
 | `/radio` | Toggle radio mode (auto-queue similar tracks) |
 | `/loop` | Toggle loop mode (repeat current track) |
 | `/shuffle` | Shuffle the current queue |
