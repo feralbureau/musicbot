@@ -666,6 +666,32 @@ async def remove_handler(_, m: Message):
         pass
 
 
+@app.on_message(filters.command("clear"))
+async def clear_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+    if cid not in queues or not queues.get(cid):
+        return await m.reply("queue is already empty")
+    count = len(queues[cid])
+    queues[cid].clear()
+    await m.reply(f"cleared {count} track{'s' if count != 1 else ''} from the queue")
+    try:
+        if cid in active:
+            from singerbot.state import last_np_msg
+            if cid in last_np_msg:
+                await send_now_playing(cid, active[cid], queues.get(cid, []))
+    except Exception:
+        pass
+
+
 @app.on_message(filters.command("restart"))
 async def restart_handler(_, m: Message):
     uid = m.from_user.id if m.from_user else None
@@ -691,6 +717,80 @@ async def restart_handler(_, m: Message):
     except Exception as e:
         logger.error(f"restart failed: {e}")
         await m.reply(f"error restarting: {e}")
+
+
+@app.on_message(filters.command("seek"))
+async def seek_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    parts = m.text.split(None, 2)
+    cid = m.chat.id
+    if len(parts) > 1:
+        maybe = parts[1]
+        if maybe.startswith(("-", "@")) or maybe.lstrip("-").isdigit():
+            try:
+                target = await app.get_chat(maybe)
+                cid = target.id
+                parts = [parts[0], parts[2]] if len(parts) > 2 else [parts[0]]
+            except Exception:
+                pass
+
+    if cid not in active:
+        return await m.reply("nothing is playing to seek in")
+
+    if len(parts) < 2:
+        return await m.reply("usage: `/seek [position]` — jump to a position in seconds or mm:ss format")
+
+    pos_arg = parts[-1]
+    try:
+        if ":" in pos_arg:
+            segs = [int(x) for x in pos_arg.split(":")]
+            if len(segs) == 2:
+                seek_sec = segs[0] * 60 + segs[1]
+            elif len(segs) == 3:
+                seek_sec = segs[0] * 3600 + segs[1] * 60 + segs[2]
+            else:
+                return await m.reply("invalid time format, use seconds or mm:ss")
+        else:
+            seek_sec = int(pos_arg)
+    except ValueError:
+        return await m.reply("invalid position, use seconds or mm:ss")
+
+    if seek_sec < 0:
+        return await m.reply("position must be 0 or greater")
+
+    total_dur = active[cid].get("duration", 0)
+    if total_dur and seek_sec >= total_dur:
+        return await m.reply(f"position exceeds track duration ({format_duration(total_dur)})")
+
+    notice = await m.reply(f"seeking to {format_duration(seek_sec)}...")
+    try:
+        state = active[cid]
+        orig = state.get("orig_file")
+        if not orig or not os.path.exists(orig):
+            await notice.delete()
+            return await m.reply("original file not available for seeking")
+
+        out = _make_transformed_filename(orig, "seek")
+        await _run_ffmpeg_transform_seek_orig(orig, out, factor=1.0, seek=seek_sec, timeout=180)
+        stream = MediaStream(out, AudioQuality.HIGH)
+        await calls.change_stream(cid, stream)
+        state["file"] = out
+        state["base_orig_offset"] = float(seek_sec)
+        state["stream_start_time"] = time.time()
+        state["paused"] = False
+        state["play_factor"] = 1.0
+        await notice.delete()
+        await m.reply(f"⏩ jumped to {format_duration(seek_sec)}")
+        logger.info(f"Seek in {cid}: to {seek_sec}s")
+    except Exception as e:
+        try:
+            await notice.delete()
+        except Exception:
+            pass
+        logger.error(f"seek failed: {e}")
+        await m.reply(f"error seeking: {str(e)[:100]}")
 
 
 @calls.on_update()
