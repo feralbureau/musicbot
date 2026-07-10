@@ -1,5 +1,8 @@
 import json
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 queues = {}
 active = {}
@@ -22,8 +25,8 @@ def save_bans(bans: set) -> None:
     try:
         with open(BANS_FILE, "w") as f:
             json.dump(sorted(int(b) for b in bans), f)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"failed to save bans: {exc}")
 
 
 ban_users = load_bans()
