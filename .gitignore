@@ -1,22 +1,30 @@
-.env
-cookies.txt
-.venv/
+# python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
 *.egg-info/
 dist/
 build/
-*.log
-.DS_Store
-.vscode/
+*.egg
+*.whl
+
+# env
+.env
+.venv
+venv/
+env/
+
+# ide
 .idea/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+.vscode/
 *.swp
 *.swo
 *~
-*.orig
+
+# os
+.DS_Store
+Thumbs.db
+
+# project specific
+/tmp/singerbot_cache/
+*.session
+bans.json
