@@ -793,6 +793,48 @@ async def seek_handler(_, m: Message):
         await m.reply(f"error seeking: {str(e)[:100]}")
 
 
+@app.on_message(filters.command("volume"))
+async def volume_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    parts = m.text.split(None, 2)
+    cid = m.chat.id
+    if len(parts) > 1:
+        maybe = parts[1]
+        if maybe.startswith(("-", "@")) or maybe.lstrip("-").isdigit():
+            try:
+                target = await app.get_chat(maybe)
+                cid = target.id
+                parts = [parts[0], parts[2]] if len(parts) > 2 else [parts[0]]
+            except Exception:
+                pass
+
+    if cid not in active:
+        return await m.reply("nothing is playing, start a track first")
+
+    if len(parts) < 2:
+        cur = active[cid].get("volume", 100)
+        return await m.reply(f"current volume: **{cur}%**\nuse `/volume [1-200]` to change it")
+
+    try:
+        vol = int(parts[-1])
+    except ValueError:
+        return await m.reply("volume must be a number between 1 and 200")
+
+    if vol < 1 or vol > 200:
+        return await m.reply("volume must be between 1 and 200")
+
+    try:
+        await calls.change_volume_call(cid, vol)
+        active[cid]["volume"] = vol
+        await m.reply(f"volume set to **{vol}%**")
+        logger.info(f"Volume changed in {cid}: {vol}%")
+    except Exception as e:
+        logger.error(f"volume change failed in {cid}: {e}")
+        await m.reply(f"error changing volume: {str(e)[:100]}")
+
+
 @calls.on_update()
 async def on_end(_, u: Update):
     from pytgcalls.types import StreamAudioEnded

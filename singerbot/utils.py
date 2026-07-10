@@ -302,6 +302,7 @@ def _init_active_state_for_song(song: dict) -> dict:
         "paused": False,
         "paused_at": None,
         "play_factor": 1.0,
+        "volume": 100,
     }
 
 
