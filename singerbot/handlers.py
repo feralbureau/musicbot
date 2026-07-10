@@ -174,6 +174,7 @@ async def start(_, m: Message):
         "• `/stop` - stop and clear queue\n"
         "• `/queue` - check current queue\n"
         "• `/radio` - toggle auto-queue mode\n"
+        "• `/volume` - adjust volume (1-200)\n"
         "• `/loop` - toggle repeat mode\n\n"
         "**Admin Commands:**\n"
         "• `/speedup` - 1.2x speed\n"
@@ -203,6 +204,7 @@ async def help_cb(_, q: CallbackQuery):
         "• `/stop` - Stop and clear queue\n"
         "• `/queue` - View current tracks\n"
         "• `/radio` - Toggle auto-queue similar tracks\n"
+        "• `/volume` - Adjust volume (1-200)\n"
         "• `/remove [pos]` - Remove track at position from queue\n\n"
         "**🔐 Admin Commands:**\n"
         "• `/speedup` - 1.2x speed + pitch up\n"
@@ -479,6 +481,8 @@ async def current_handler(_, m: Message):
         text += "**🔁 loop:** ON ✅\n"
     if state.get("play_factor", 1.0) != 1.0:
         text += f"**⚡ speed:** {state['play_factor']}x\n"
+    if state.get("volume", 100) != 100:
+        text += f"**🔊 volume:** {state['volume']}%\n"
 
     thumb = state.get("thumb") or DEFAULT_THUMB
     buttons = InlineKeyboardMarkup(

@@ -101,6 +101,7 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/shuffle` | Shuffle the current queue |
 | `/remove [position]` | Remove a specific track from the queue by its position number |
 | `/restart` | Restart the current track from the beginning |
+| `/volume [1-200]` | Adjust playback volume (default: 100%) |
 | `/speedup` | Speed up playback (admin only) |
 | `/slowed` | Slow down playback (admin only) |
 | `/restore` | Restore normal playback speed (admin only) |
