@@ -2,6 +2,8 @@ import json
 import logging
 import os
 
+from singerbot.config import DOWNLOADS_DIR
+
 logger = logging.getLogger(__name__)
 
 queues = {}
@@ -10,7 +12,7 @@ radio_mode = set()
 loop_mode = set()
 last_np_msg = {}
 
-BANS_FILE = os.path.join(os.getenv("DOWNLOADS_DIR", "/tmp/singerbot_cache"), "bans.json")
+BANS_FILE = os.path.join(DOWNLOADS_DIR, "bans.json")
 
 
 def load_bans() -> set:
