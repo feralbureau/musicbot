@@ -135,6 +135,13 @@ async def callback_handler(_, query: CallbackQuery):
             if cid not in queues:
                 queues[cid] = []
             if cid not in active:
+                try:
+                    target_chat = await app.get_chat(cid)
+                    if target_chat.type in ["group", "supergroup"]:
+                        if not await ensure_assistant_joined(cid):
+                            return await query.message.edit("bot needs admin to invite assistant")
+                except Exception:
+                    pass
                 state = _init_active_state_for_song(song)
                 stream = MediaStream(state["file"], AudioQuality.HIGH)
                 try:
