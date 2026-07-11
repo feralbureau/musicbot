@@ -455,7 +455,7 @@ async def queue(_, m: Message):
     await m.reply(text)
 
 
-@app.on_message(filters.command(["current", "np"]))
+@app.on_message(filters.command(["current", "np", "now"]))
 async def current_handler(_, m: Message):
     uid = m.from_user.id if m.from_user else None
     if uid and is_banned(uid):
