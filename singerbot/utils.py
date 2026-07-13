@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import shlex
+import shutil
 import time
 import uuid
 
@@ -176,6 +177,38 @@ def build_progress_bar(elapsed: float, total: float, width: int = 12) -> str:
     filled = int(ratio * width)
     bar = "▓" * filled + "░" * (width - filled)
     return f"{bar} {int(ratio * 100)}%"
+
+
+async def cleanup_cache(max_age_hours: int = 24) -> dict:
+    """Remove cached audio files older than max_age_hours.
+
+    Returns a dict with keys: removed (count), freed_bytes, errors (count).
+    Also removes bans.json-orphaned stale transform files (speedup, slowed, restored, seek).
+    """
+    removed = 0
+    errors = 0
+    freed = 0
+    now = time.time()
+    max_age = max_age_hours * 3600
+
+    if not os.path.isdir(DOWNLOADS_DIR):
+        return {"removed": 0, "freed_bytes": 0, "errors": 0}
+
+    for fname in os.listdir(DOWNLOADS_DIR):
+        fpath = os.path.join(DOWNLOADS_DIR, fname)
+        # Skip bans.json
+        if fname == "bans.json" or not os.path.isfile(fpath):
+            continue
+        try:
+            mtime = os.path.getmtime(fpath)
+            if now - mtime > max_age:
+                sz = os.path.getsize(fpath)
+                os.remove(fpath)
+                removed += 1
+                freed += sz
+        except Exception:
+            errors += 1
+    return {"removed": removed, "freed_bytes": freed, "errors": errors}
 
 
 async def ensure_assistant_joined(cid):

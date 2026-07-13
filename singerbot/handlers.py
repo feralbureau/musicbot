@@ -705,6 +705,73 @@ async def clear_handler(_, m: Message):
         pass
 
 
+@app.on_message(filters.command("cleanup"))
+async def cleanup_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+
+    # Parse optional hours arg
+    hours = 24
+    if len(m.command) >= 2:
+        try:
+            h = int(m.command[-1])
+            if 1 <= h <= 168:
+                hours = h
+        except ValueError:
+            pass
+
+    # Quick size estimate before cleanup
+    pre_size = 0
+    pre_count = 0
+    if os.path.isdir(DOWNLOADS_DIR):
+        for fname in os.listdir(DOWNLOADS_DIR):
+            fpath = os.path.join(DOWNLOADS_DIR, fname)
+            if fname == "bans.json" or not os.path.isfile(fpath):
+                continue
+            pre_count += 1
+            pre_size += os.path.getsize(fpath)
+
+    progress = await m.reply("🧹 cleaning up cache...")
+    from singerbot.utils import cleanup_cache
+    result = await cleanup_cache(hours)
+
+    post_size = 0
+    if os.path.isdir(DOWNLOADS_DIR):
+        for fname in os.listdir(DOWNLOADS_DIR):
+            fpath = os.path.join(DOWNLOADS_DIR, fname)
+            if fname == "bans.json" or not os.path.isfile(fpath):
+                continue
+            post_size += os.path.getsize(fpath)
+
+    freed_mb = result["freed_bytes"] / (1024 * 1024)
+    remain_mb = post_size / (1024 * 1024)
+    saved = pre_count - (result["removed"] + result.get("errors", 0))
+
+    reply = (
+        f"🧹 **cache cleaned**\n\n"
+        f"files removed: **{result['removed']}** (older than {hours}h)\n"
+        f"space freed: **{freed_mb:.1f} MB**\n"
+        f"remaining: **{saved} files ({remain_mb:.1f} MB)**\n"
+    )
+    if result["errors"]:
+        reply += f"⚠️ {result['errors']} error(s) during cleanup\n"
+    if not result["removed"] and not result["errors"]:
+        reply += "\n_nothing to clean_"
+    try:
+        await progress.edit(reply)
+    except Exception:
+        await m.reply(reply)
+    logger.info(f"Cache cleanup in {cid}: removed {result['removed']} files, freed {freed_mb:.1f}MB")
+
+
 @app.on_message(filters.command("restart"))
 async def restart_handler(_, m: Message):
     uid = m.from_user.id if m.from_user else None
