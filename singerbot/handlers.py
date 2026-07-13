@@ -15,6 +15,7 @@ from singerbot.utils import (
     send_now_playing, _init_active_state_for_song, sc_id_from_song,
     fetch_radio_ids, format_duration, get_current_orig_position, _make_transformed_filename,
     _run_ffmpeg_transform_seek_orig, _download_to_file, search_soundcloud_tracks,
+    build_progress_bar,
 )
 
 @app.on_callback_query()
@@ -480,6 +481,7 @@ async def current_handler(_, m: Message):
         "**🎵 now playing**\n\n"
         f"**title:** {state['title']}\n"
         f"**artist:** {state['artist']}\n"
+        f"**{build_progress_bar(elapsed, total)}**\n"
         f"**⏳ {pos_str} / {total_str}**\n"
     )
     if cid in radio_mode:

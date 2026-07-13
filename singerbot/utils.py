@@ -168,6 +168,16 @@ def format_duration(sec):
     return f"{m}:{s:02d}"
 
 
+def build_progress_bar(elapsed: float, total: float, width: int = 12) -> str:
+    """Return a visual progress bar string like '▓▓▓▓▓░░░░ 45%'."""
+    if total <= 0:
+        return "░" * width + " 0%"
+    ratio = min(max(elapsed / total, 0.0), 1.0)
+    filled = int(ratio * width)
+    bar = "▓" * filled + "░" * (width - filled)
+    return f"{bar} {int(ratio * 100)}%"
+
+
 async def ensure_assistant_joined(cid):
     try:
         await user.get_chat_member(cid, "me")
