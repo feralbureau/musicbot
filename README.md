@@ -92,7 +92,7 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/resume` | Resume playback |
 | `/stop` | Stop playback and clear queue |
 | `/queue` | View the current queue |
-| `/current` or `/np` | View currently playing track |
+| `/current` or `/np` or `/now` | View currently playing track with progress bar |
 | `/search [query]` | Search for songs on SoundCloud |
 | `/clear` | Clear the queue without stopping playback |
 | `/seek [pos]` | Jump to a position (seconds or mm:ss) in the current track |
@@ -102,6 +102,7 @@ You can provide multiple client IDs (comma-separated) for rotation fallback in c
 | `/remove [position]` | Remove a specific track from the queue by its position number |
 | `/restart` | Restart the current track from the beginning |
 | `/volume [1-200]` | Adjust playback volume (default: 100%) |
+| `/cleanup [hours]` | Remove cached audio files older than N hours (default: 24) |
 | `/speedup` | Speed up playback (admin only) |
 | `/slowed` | Slow down playback (admin only) |
 | `/restore` | Restore normal playback speed (admin only) |
