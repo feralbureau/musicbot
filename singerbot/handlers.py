@@ -1,5 +1,6 @@
 import asyncio
 import os
+import random
 import time
 from pyrogram import filters
 from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -8,7 +9,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 
 from singerbot.config import ADMIN_ID, DEFAULT_THUMB, DOWNLOADS_DIR, RADIO_BATCH
 from singerbot.core import app, calls, logger
-from singerbot.state import active, queues, ban_users, radio_mode, loop_mode, save_bans
+from singerbot.state import active, queues, ban_users, radio_mode, loop_mode, save_bans, bot_start_time, tracks_played_count
 from singerbot.platforms.soundcloud import get_track as sc_get_track, get_stream_url as sc_get_stream_url
 from singerbot.utils import (
     is_banned, play_next, download_audio, ensure_assistant_joined,
@@ -641,7 +642,6 @@ async def shuffle_handler(_, m: Message):
             pass
     if cid not in queues or not queues[cid]:
         return await m.reply("queue is empty, nothing to shuffle")
-    import random
     random.shuffle(queues[cid])
     await m.reply(f"shuffled {len(queues[cid])} tracks in the queue")
 
@@ -1089,3 +1089,48 @@ async def restore_handler(_, m: Message):
             pass
         logger.error(f"restore failed: {e}")
         await m.reply(f"error restoring: {e}")
+
+
+@app.on_message(filters.command("stats"))
+async def stats_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+
+    uptime_sec = time.time() - bot_start_time
+    days, rem = divmod(uptime_sec, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    uptime_str = f"{int(days)}d {int(hours)}h {int(mins)}m {int(secs)}s"
+
+    total_queued = sum(len(q) for q in queues.values())
+    cache_size = 0
+    cache_files = 0
+    if os.path.isdir(DOWNLOADS_DIR):
+        for fname in os.listdir(DOWNLOADS_DIR):
+            fpath = os.path.join(DOWNLOADS_DIR, fname)
+            if fname == "bans.json" or not os.path.isfile(fpath):
+                continue
+            cache_files += 1
+            cache_size += os.path.getsize(fpath)
+    cache_mb = cache_size / (1024 * 1024)
+
+    text = (
+        "**📊 bot stats**\n\n"
+        f"**⏱ uptime:** {uptime_str}\n"
+        f"**🎵 tracks played:** {tracks_played_count()}\n"
+        f"**💬 active chats:** {len(active)}\n"
+        f"**📋 total queued:** {total_queued}\n"
+        f"**📻 radio chats:** {len(radio_mode)}\n"
+        f"**🔁 loop chats:** {len(loop_mode)}\n"
+        f"**🚫 banned users:** {len(ban_users)}\n"
+        f"**💾 cache:** {cache_files} files ({cache_mb:.1f} MB)\n"
+    )
+    await m.reply(text)

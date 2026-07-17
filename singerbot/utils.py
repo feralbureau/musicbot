@@ -14,7 +14,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 from pytgcalls.types import MediaStream, AudioQuality
 
 from singerbot.config import DOWNLOADS_DIR, RADIO_BATCH, DEFAULT_THUMB
-from singerbot.state import queues, active, radio_mode, ban_users, loop_mode
+from singerbot.state import queues, active, radio_mode, ban_users, loop_mode, increment_tracks_played
 from singerbot.core import app, user, calls, logger
 from singerbot.platforms.soundcloud import (
     search_tracks as sc_search_tracks,
@@ -371,6 +371,7 @@ async def play_next(cid, _retries: int = 0):
         stream = MediaStream(state["file"], AudioQuality.HIGH)
         await calls.change_stream(cid, stream)
         active[cid] = state
+        increment_tracks_played()
         await send_now_playing(cid, state, queues.get(cid, []))
         logger.info(f"Playing: {state['title']}")
         try:
