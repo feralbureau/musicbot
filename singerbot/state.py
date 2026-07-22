@@ -45,3 +45,6 @@ def save_bans(bans: set) -> None:
 
 
 ban_users = load_bans()
+
+track_history: dict = {}  # chat_id -> list of RecentlyPlayed tracks
+MAX_HISTORY = 15

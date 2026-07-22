@@ -83,6 +83,20 @@ def sc_id_from_song(song: dict) -> str:
     return song.get("sc_id", "")
 
 
+def record_history(cid, state):
+    """Append a track to the in-memory play history for this chat."""
+    from singerbot.state import track_history, MAX_HISTORY
+    if cid not in track_history:
+        track_history[cid] = []
+    track_history[cid].append({
+        "title": state.get("title", "unknown"),
+        "artist": state.get("artist", "unknown"),
+        "played_at": time.time(),
+    })
+    if len(track_history[cid]) > MAX_HISTORY:
+        track_history[cid] = track_history[cid][-MAX_HISTORY:]
+
+
 async def fetch_radio_ids(sc_id: str, max_items: int = RADIO_BATCH) -> list:
     if not sc_id:
         return []
@@ -372,6 +386,7 @@ async def play_next(cid, _retries: int = 0):
         await calls.change_stream(cid, stream)
         active[cid] = state
         increment_tracks_played()
+        record_history(cid, state)
         await send_now_playing(cid, state, queues.get(cid, []))
         logger.info(f"Playing: {state['title']}")
         try:

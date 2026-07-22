@@ -16,7 +16,7 @@ from singerbot.utils import (
     send_now_playing, _init_active_state_for_song, sc_id_from_song,
     fetch_radio_ids, format_duration, get_current_orig_position, _make_transformed_filename,
     _run_ffmpeg_transform_seek_orig, _download_to_file, search_soundcloud_tracks,
-    build_progress_bar,
+    build_progress_bar, record_history,
 )
 
 @app.on_callback_query()
@@ -154,6 +154,7 @@ async def callback_handler(_, query: CallbackQuery):
                     else:
                         raise
                 active[cid] = state
+                record_history(cid, state)
                 await send_now_playing(cid, state, [])
             else:
                 queues[cid].append(song)
@@ -330,6 +331,7 @@ async def play(_, m: Message):
                         raise
                 active[cid] = state
                 await msg.delete()
+                record_history(cid, state)
                 await send_now_playing(cid, state, [])
                 logger.info(f"Started: {state['title']}")
             except NoActiveGroupCall:
@@ -1095,6 +1097,40 @@ async def restore_handler(_, m: Message):
             pass
         logger.error(f"restore failed: {e}")
         await m.reply(f"error restoring: {e}")
+
+
+@app.on_message(filters.command("history"))
+async def history_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    cid = m.chat.id
+    if uid == ADMIN_ID and len(m.command) > 1:
+        try:
+            target = await app.get_chat(m.command[1])
+            cid = target.id
+        except Exception:
+            pass
+
+    from singerbot.state import track_history
+    hist = track_history.get(cid, [])
+    if not hist:
+        return await m.reply("no tracks played yet in this chat")
+
+    text = "**📜 recently played**\n\n"
+    for i, t in enumerate(hist[-10:], 1):
+        ago = int(time.time() - t["played_at"])
+        mins = ago // 60
+        if mins < 1:
+            time_str = "just now"
+        elif mins < 60:
+            time_str = f"{mins}m ago"
+        else:
+            hours = mins // 60
+            time_str = f"{hours}h ago"
+        text += f"{i}. {t['title']} — {t['artist']} _{time_str}_\n"
+    text += f"\n_total: {len(hist)} tracks_"
+    await m.reply(text)
 
 
 @app.on_message(filters.command("stats"))
