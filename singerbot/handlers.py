@@ -162,6 +162,17 @@ async def callback_handler(_, query: CallbackQuery):
         except Exception as e:
             await app.send_message(cid, f"❌ error: {str(e)}")
 
+@app.on_message(filters.command("ping"))
+async def ping_handler(_, m: Message):
+    uid = m.from_user.id if m.from_user else None
+    if uid and is_banned(uid):
+        return
+    start = time.time()
+    msg = await m.reply("🏓 pong!")
+    elapsed = (time.time() - start) * 1000
+    await msg.edit(f"🏓 pong! — _{elapsed:.0f}ms_")
+
+
 @app.on_message(filters.command("start"))
 async def start(_, m: Message):
     uid = m.from_user.id if m.from_user else None
