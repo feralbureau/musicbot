@@ -795,6 +795,12 @@ async def restart_handler(_, m: Message):
     try:
         state = active[cid]
         new_state = _init_active_state_for_song(state)
+        # preserve the original file if it exists — the current file
+        # might be a transformed copy (speedup/slowed/seek)
+        orig = state.get("orig_file")
+        if orig and os.path.exists(orig):
+            new_state["orig_file"] = orig
+            new_state["file"] = orig
         stream = MediaStream(new_state["file"], AudioQuality.HIGH)
         await calls.change_stream(cid, stream)
         active[cid] = new_state
